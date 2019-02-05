@@ -1,0 +1,1 @@
+/Users/jaredgalloway/Documents/TreeSequenceEncoding/EncodeTreeSequence.py
