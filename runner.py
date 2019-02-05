@@ -7,20 +7,7 @@ from MyNetworks import *
 from MyDemographics import *
 from plotTestVali import *
 
-'''
-Set up the directory structure to store the simulations data.
-Here I use the same name for the parentDir, results pickle file, and pdf plot.
-This will keep our data - results - plots attached for each experiment.
-
- - DataDir/
-   - ParentDir/ (name the experiment)
-       -trainDir/
-       -valiDir/
-       -testDir/
-
-'''
-
-ParentDir = "/dem01"
+ParentDir = "/EqualA"
 DataDir = "/data0/jadrion/projects/recombover"
 
 #-----------
@@ -28,7 +15,6 @@ DataDir = "/data0/jadrion/projects/recombover"
 trainDir = DataDir + ParentDir + "/train/"
 valiDir = DataDir + ParentDir + "/vali/"
 testDir = DataDir + ParentDir + "/test/"
-'''
 #Parameters for simulating.
 
 dg_params_large = {'N': 50,
@@ -39,9 +25,6 @@ dg_params_large = {'N': 50,
     'priorLowsMu':1.25e-8,
     'priorHighsMu':3.75e-8,
     'ChromosomeLength':1e5,
-    #'MspDemographics': tennessen_CEU(sample_size=50),
-    'MspDemographics': [],
-    'ratioDemographics': 1
           }
 
 #instanciate three simulators all with the same params
@@ -50,33 +33,27 @@ dg_train = Simulator(**dg_params_large)
 dg_vali = Simulator(**dg_params_large)
 dg_test = Simulator(**dg_params_large)
 
-#ask how many CPU's we have
-
 CPU_Count = mp.cpu_count()
 
-#do the actual simulating.
-#
-
 print("simulating")
-dg_train.simulateAndProduceTrees(numReps=100,direc=trainDir,simulator="msprime",nProc=CPU_Count)
-dg_vali.simulateAndProduceTrees(numReps=150,direc=valiDir,simulator="msprime",nProc=CPU_Count)
-dg_test.simulateAndProduceTrees(numReps=150,direc=testDir,simulator="msprime",nProc=CPU_Count)
+dg_train.simulateAndProduceTrees(numReps=100000,direc=trainDir,simulator="msprime",nProc=CPU_Count)
+dg_vali.simulateAndProduceTrees(numReps=1500,direc=valiDir,simulator="msprime",nProc=CPU_Count)
+dg_test.simulateAndProduceTrees(numReps=1500,direc=testDir,simulator="msprime",nProc=CPU_Count)
 print("DONE SIMULATING")
-'''
 
 maxSegSites = 0
 minSegSites = 10000
 for ds in [trainDir,valiDir,testDir]:
     DsInfoDir = pickle.load(open(ds+"info.p","rb"))
-    segSitesInDs = max(DsInfoDir["segSites"])
-    segSitesInDsMin = min(DsInfoDir["segSites"])
+    segSitesInDs = max(DsInfoDir["numNodes"])
+    segSitesInDsMin = min(DsInfoDir["numNodes"])
     maxSegSites = max(maxSegSites,segSitesInDs)
     minSegSites = min(minSegSites,segSitesInDsMin)
 
 print("MaxSegSites:", maxSegSites)
 print("MinSegSites:", minSegSites)
 
-#sys.exit()
+sys.exit()
 
 bds_train_params = {
     'treesDirectory':trainDir,
