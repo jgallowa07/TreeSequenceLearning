@@ -135,10 +135,10 @@ class Simulator(object):
             print("KeyboardInterrupt")
             sys.exit(0)
 
-        self.segSites=np.empty(numReps,dtype="int64")
+        self.numNodes=np.empty(numReps,dtype="int64")
         for i in range(result_q.qsize()):
             item = result_q.get()
-            self.segSites[item[0]]=item[1]
+            self.numNodes[item[0]]=item[1]
 
         self.__dict__["numReps"] = numReps
         pickle.dump(self.__dict__,open(os.path.join(direc,"info.p"),"wb"))

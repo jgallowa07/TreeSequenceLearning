@@ -374,13 +374,13 @@ def DiscretiseTreeSequence(ts):
                       time = (nodes.time/oldest_time)*256,
                       population = nodes.population
                         )
-    
+    ''' 
     edges.set_columns(left = np.round(edges.left),
                       right = np.round(edges.right),
                       child = edges.child,
                       parent = edges.parent
                         )
-                      
+    '''               
     return tables.tree_sequence()
 
 #-------------------------------------------------------------------------------------------
@@ -426,7 +426,7 @@ def EncodeTree_F32(ts,width=None):
                       B = Number of mutations? / type of mutations / total effect size?
     '''
 
-    pic_width = ts.sequence_length
+    pic_width = int(ts.sequence_length)
     if(width != None):  
         pic_width = width
                    
@@ -444,8 +444,8 @@ def EncodeTree_F32(ts,width=None):
         if(width!=None):    
             left = int((left/ts.sequence_length)*width)
             right = int((right/ts.sequence_length)*width)
-        A[child,left:right,0] = np.float32(parent)
-        A[child,left:right,1] = np.float32(bl)
+        A[child,int(left):int(right),0] = np.float32(parent)
+        A[child,int(left):int(right),1] = np.float32(bl)
 
     return A
 
@@ -486,7 +486,3 @@ def EncodeTree_F64(ts,width=None):
         A[edge.child,left:right,2] = bot
 
     return A
-
-
-
-
