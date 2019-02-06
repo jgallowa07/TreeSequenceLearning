@@ -356,9 +356,7 @@ def segSitesStats(treesDirec):
 
     return segSites
 
-#-------------------------------------------------------------------------------------------
-
-def DiscretiseTreeSequence(ts):
+def DiscretizeTreeSequence(ts):
     '''
     Disretise float values within a tree sequence
     
@@ -383,8 +381,6 @@ def DiscretiseTreeSequence(ts):
     '''               
     return tables.tree_sequence()
 
-#-------------------------------------------------------------------------------------------
-
 def splitInt16(int16):
     '''
     Take in a 16 bit integer, and return the top and bottom 8 bit integers    
@@ -396,8 +392,6 @@ def splitInt16(int16):
     top = int(bits[:8],2)
     bot = int(bits[8:],2)
     return np.uint8(top),np.uint8(bot)
-
-#-------------------------------------------------------------------------------------------
 
 def GlueInt8(int8_t,int8_b):
     '''
@@ -413,18 +407,8 @@ def GlueInt8(int8_t,int8_b):
     ret = int(bits_a+bits_b,2)
     return np.uint16(ret)
 
-#-------------------------------------------------------------------------------------------
-
+'''
 def EncodeTree_F32(ts,width=None):
-
-    '''
-    Encoding of a tree sequence into a matrix format ideally for DL,
-    But also for visualization purposes
-    
-    for now let's try R = Time
-                      G = Point to parent / Branch Length? 
-                      B = Number of mutations? / type of mutations / total effect size?
-    '''
 
     pic_width = int(ts.sequence_length)
     if(width != None):  
@@ -448,10 +432,9 @@ def EncodeTree_F32(ts,width=None):
         A[child,int(left):int(right),1] = np.float32(bl)
 
     return A
+'''
 
-#-------------------------------------------------------------------------------------------
-
-def EncodeTree_F64(ts,width=None):
+def EncodeTree_F32(ts,width=None):
 
     '''
 
@@ -486,3 +469,46 @@ def EncodeTree_F64(ts,width=None):
         A[edge.child,left:right,2] = bot
 
     return A
+
+
+def DecodeTree_F64(A): 
+   
+    '''
+    Take in the array produced by 'EncodeTree()' and return a 
+    the inverse operation to produce a TreeSequence() for testing.
+    
+    '''
+
+    num_rows = A.shape[0]    
+    num_columns = A.shape[1]    
+
+    tables = msprime.TableCollection(sequence_length=num_columns)
+    node_table = tables.nodes
+    edge_table = tables.edges
+    pop_table = tables.populations
+    pop_table.add_row()
+
+    for row in range(num_rows):
+
+        flag=0
+        time = A[row,0,0]
+        if(time == 0.0):
+            flag=1
+        node_table.add_row(flags=flag,time=float(time),population=0)
+    
+        for column in range(num_columns):   
+            
+            top = A[row,column,1]
+            bot = A[row,column,2]
+            #for padding, we don't add edges 
+            if((top < 0) | (bot < 0)):  
+                continue
+            parent = GlueInt8(top,bot)
+            edge_table.add_row(left=column,right=column+1,parent=parent,child=row)  
+    
+
+    tables.sort()        
+    tables.simplify()
+    ts = tables.tree_sequence()
+             
+    return ts
