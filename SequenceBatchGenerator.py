@@ -4,7 +4,6 @@ Author: Jared Galloway.
 
 from imports import *
 from TreesDirHelpers import *
-from EncodeTreeSequence import *
 
 class SequenceBatchGenerator(keras.utils.Sequence):
 
@@ -49,7 +48,6 @@ class SequenceBatchGenerator(keras.utils.Sequence):
         self.frameWidth = frameWidth
         self.width = width
         self.seperateTimes = seperateTimes
-        self.realLinePos = realLinePos
         self.indices = np.arange(self.infoDir["numReps"])
         self.shuffleExamples = shuffleExamples
 
@@ -101,7 +99,9 @@ class SequenceBatchGenerator(keras.utils.Sequence):
             dts = DiscretiseTreeSequence(ts=treeSequence)
             Encodings.append(EncodeTree_F64(ts=dts,width=self.width).astype(np.uint8))
 
-        if(self.seperateTimes)
+        Encodings = pad_Encodings(Encodings,maxSNPs=self.maxLen)
+
+        if(self.seperateTimes):
             Times.append(np.array([node.time for node in treeSequence.nodes()],dtype='float32'))
             return [Encodings.Times],targets
         else:

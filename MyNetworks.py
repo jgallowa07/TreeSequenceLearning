@@ -8,23 +8,25 @@ inference of Rho through images of the genotype matrices.
 
 from imports import *
 
-def CNN1D(x,y):
+def CNN2D(x,y):
 
-    img_1_inputs = Input(shape=(inputShape[0][1],inputShape[0][2]))
+    batch_size = x.shape[0]
+    num_nodes = x.shape[1]
+    window_size = x.shape[2]
+    filters = x.shape[3]
 
-    h = layers.Conv1D(256, kernel_size=2, activation='relu', name='conv1_1')(img_1_inputs)
-    h = layers.Conv1D(256, kernel_size=2, dilation_rate=1, activation='relu')(h)
-    h = layers.AveragePooling1D(pool_size=2)(h)
-    h = layers.Dropout(0.25)(h)
-    h = layers.Conv1D(128, kernel_size=2, activation='relu')(h)
-    h = layers.AveragePooling1D(pool_size=2)(h)
+    img_1_inputs = Input(shape=(num_nodes,window_size,filters))
+
+    h = layers.Conv2D(64, kernel_size=(4,4), activation='relu', name='conv1_1')(img_1_inputs)
+    #h = layers.Conv1D(256, kernel_size=2, dilation_rate=1, activation='relu')(h)
+    h = layers.AveragePooling2D(pool_size=2)(h)
     h = layers.Dropout(0.25)(h)
     h = layers.Flatten()(h)
-    h = layers.Dense(128,activation='relu')(h)
-    h = Dropout(0.2)(h)
+    h = layers.Dense(32)(h)
+    h = layers.Dropout(0.25)(h)
     output = layers.Dense(1,kernel_initializer='normal',name="out",activation='linear')(h)
 
-    model = Model(inputs=[img_1_inputs,loc_input], outputs=[output])
+    model = Model(inputs=[img_1_inputs], outputs=[output])
     model.compile(loss='mse', optimizer='adam')
     model.summary()
 

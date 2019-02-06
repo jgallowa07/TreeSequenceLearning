@@ -4,7 +4,6 @@ import sys
 import msprime as msp
 import numpy as np
 import subprocess
-import pyslim
 import os,io,shutil
 import multiprocessing as mp
 import threading
@@ -36,8 +35,6 @@ import matplotlib as mpl
 mpl.use('pdf')
 import matplotlib.pyplot as plt
 from scipy import stats
-from prettytable import PrettyTable as pt
-from sklearn.neighbors import NearestNeighbors
 
 
 
