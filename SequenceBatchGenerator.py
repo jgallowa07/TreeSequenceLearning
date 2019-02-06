@@ -99,7 +99,7 @@ class SequenceBatchGenerator(keras.utils.Sequence):
             treeFilepath = os.path.join(self.treesDirectory,str(treeIndex) + ".trees")
             treeSequence = msp.load(treeFilepath)
             dts = DiscretiseTreeSequence(ts=treeSequence)
-            Encodings.append(EncodeTree_F32(ts=dts,width=self.width))
+            Encodings.append(EncodeTree_F64(ts=dts,width=self.width).astype(np.uint8))
 
         if(self.seperateTimes)
             Times.append(np.array([node.time for node in treeSequence.nodes()],dtype='float32'))
