@@ -33,3 +33,33 @@ def CNN2D(x,y):
     return model
     
 
+def CNN2D_S(x,y):
+        
+    batch_size = x.shape[0]
+    num_nodes = x.shape[1]
+    window_size = x.shape[2]
+    filters = x.shape[3]
+
+    model = Sequential()
+    model.add(layers.Conv2D(64, kernel_size=(3, 3),
+    #model.add(layers.Conv2D(32, kernel_size=(3, 3),
+                     activation='relu',
+                     #activation='linear',
+                     input_shape=(num_nodes,window_size,filters)))
+    model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+    model.add(layers.MaxPooling2D(pool_size=(2, 2)))
+    model.add(layers.Dropout(0.2)) #less dropout
+    model.add(layers.Flatten())
+    model.add(layers.Dense(64, activation='relu'))
+    #model.add(layers.Dense(64, activation='linear'))
+    model.add(layers.Dropout(0.2))
+
+    model.add(layers.Dense(1,kernel_initializer='normal',name="out",activation='linear'))
+
+    model.compile(loss='mse', optimizer='adam')
+    model.summary()
+
+    return model    
+    
+
+

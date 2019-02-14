@@ -96,8 +96,8 @@ class SequenceBatchGenerator(keras.utils.Sequence):
         for treeIndex in batchTreeIndices:
             treeFilepath = os.path.join(self.treesDirectory,str(treeIndex) + ".trees")
             treeSequence = msp.load(treeFilepath)
-            dts = DiscretiseTreeSequence(ts=treeSequence)
-            Encodings.append(EncodeTree_F64(ts=dts,width=self.width).astype(np.uint8))
+            #dts = DiscretizeTreeSequence(ts=treeSequence)
+            Encodings.append(EncodeTreeSequence(ts=treeSequence,width=self.width))
 
         Encodings = pad_Encodings(Encodings,maxSNPs=self.maxLen)
 

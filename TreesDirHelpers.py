@@ -228,8 +228,14 @@ def pad_Encodings(Encodings,maxSNPs=None,frameWidth=0,center=False):
         paddingLen = maxSNPs - numSNPs
 
         Enc[i] = np.pad(Enc[i],((0,paddingLen),(0,0),(0,0)),"constant",constant_values=-1.0)
+        #Enc[i] = np.pad(Enc[i],((0,paddingLen),(0,0),(0,0)),"constant",constant_values=0.0)
 
-    Enc = np.array(Enc,dtype='float32')
+    #Enc = np.array(Enc,dtype='float32')
+    Enc = np.array(Enc,dtype='int8')
+
+    if(frameWidth):
+        fw = frameWidth
+        haps = np.pad(haps,((0,0),(fw,fw),(fw,fw),(0,0)),"constant",constant_values=-1.0)
 
     return Enc
 
@@ -356,31 +362,6 @@ def segSitesStats(treesDirec):
 
     return segSites
 
-def DiscretizeTreeSequence(ts):
-    '''
-    Disretise float values within a tree sequence
-    
-    mainly for testing purposes to make sure the decoding is equal to pre-encoding.
-    '''    
-
-    tables = ts.dump_tables()
-    nodes = tables.nodes
-    edges = tables.edges
-    oldest_time = max(nodes.time)
-
-    nodes.set_columns(flags=nodes.flags,
-                      time = (nodes.time/oldest_time)*256,
-                      population = nodes.population
-                        )
-    ''' 
-    edges.set_columns(left = np.round(edges.left),
-                      right = np.round(edges.right),
-                      child = edges.child,
-                      parent = edges.parent
-                        )
-    '''               
-    return tables.tree_sequence()
-
 def splitInt16(int16):
     '''
     Take in a 16 bit integer, and return the top and bottom 8 bit integers    
@@ -407,55 +388,26 @@ def GlueInt8(int8_t,int8_b):
     ret = int(bits_a+bits_b,2)
     return np.uint16(ret)
 
-'''
-def EncodeTree_F32(ts,width=None):
-
-    pic_width = int(ts.sequence_length)
-    if(width != None):  
-        pic_width = width
-                   
-    A = np.zeros((ts.num_nodes,int(pic_width),3),dtype=np.float32) - 1
-        
-    for i,node in enumerate(ts.nodes()):
-        A[i,0:pic_width,2] = np.float32(node.time)
-        
-    for edge in ts.edges():
-        bl = ts.node(edge.parent).time - ts.node(edge.child).time
-        child = edge.child
-        parent = edge.parent
-        left = int(edge.left)
-        right = int(edge.right)
-        if(width!=None):    
-            left = int((left/ts.sequence_length)*width)
-            right = int((right/ts.sequence_length)*width)
-        A[child,int(left):int(right),0] = np.float32(parent)
-        A[child,int(left):int(right),1] = np.float32(bl)
-
-    return A
-'''
-
-def EncodeTree_F32(ts,width=None):
+def EncodeTreeSequence(ts,width=None,return_8bit=True):
 
     '''
-
     This one is for testing / visualization: 
     matches nodes.time being float64 
 
     Encoding of a tree sequence into a matrix format ideally for DL,
-    But also for visualization purposes
-
-    
+    But also for visualization purposes    
     '''
+    oldest = max([node.time for node in ts.nodes()])
 
     pic_width = ts.sequence_length
     if(width != None):  
         pic_width = width
                    
-    A = np.zeros((ts.num_nodes,int(pic_width),3),dtype=np.float32) - 1
+    A = np.zeros((ts.num_nodes,int(pic_width),3),dtype=np.float64) - 1
    
     for i,node in enumerate(ts.nodes()):
-        #bl = ts.node(edge.parent).time - ts.node(edge.child).time
-        A[i,0:int(ts.sequence_length),0] = node.time
+        time =(node.time/oldest)*256
+        A[i,0:int(ts.sequence_length),0] = time
         
     for edge in ts.edges():
         child = edge.child
@@ -468,47 +420,90 @@ def EncodeTree_F32(ts,width=None):
         A[edge.child,left:right,1] = top
         A[edge.child,left:right,2] = bot
 
+    if(return_8bit):
+        A = np.uint8(A)
+
     return A
 
+def mae(x,y):
+    assert(len(x) == len(y))
+    summ = 0.0
+    length = len(x)
+    for i in range(length):
+        summ += abs(x[i] - y[i])
+    return summ/length
 
-def DecodeTree_F64(A): 
-   
+def mse(x,y):
+    assert(len(x) == len(y))
+    summ = 0.0
+    length = len(x)
+    for i in range(length):
+        summ += (x[i] - y[i])**2
+    return summ/length
+
+def plotResults(resultsFile,saveas):
+
     '''
-    Take in the array produced by 'EncodeTree()' and return a 
-    the inverse operation to produce a TreeSequence() for testing.
+    plotting code for testing a model on simulation. 
+    using the resulting pickle file on a training run (resultsFile).
+    This function plots the results of the final test set predictions,
+    as well as validation loss as a function of Epochs during training.
+
+    str,str -> None
     
     '''
 
-    num_rows = A.shape[0]    
-    num_columns = A.shape[1]    
+    plt.rc('font', family='serif', serif='Times')
+    plt.rc('xtick', labelsize=6)
+    plt.rc('ytick', labelsize=6)
+    plt.rc('axes', labelsize=6)
 
-    tables = msprime.TableCollection(sequence_length=num_columns)
-    node_table = tables.nodes
-    edge_table = tables.edges
-    pop_table = tables.populations
-    pop_table.add_row()
+    results = pickle.load(open( resultsFile , "rb" ))
 
-    for row in range(num_rows):
+    fig,axes = plt.subplots(2,1)
+    plt.subplots_adjust(hspace=0.5)
 
-        flag=0
-        time = A[row,0,0]
-        if(time == 0.0):
-            flag=1
-        node_table.add_row(flags=flag,time=float(time),population=0)
-    
-        for column in range(num_columns):   
-            
-            top = A[row,column,1]
-            bot = A[row,column,2]
-            #for padding, we don't add edges 
-            if((top < 0) | (bot < 0)):  
-                continue
-            parent = GlueInt8(top,bot)
-            edge_table.add_row(left=column,right=column+1,parent=parent,child=row)  
-    
+    predictions = np.array([float(Y) for Y in results["predictions"]])
+    realValues = np.array([float(X) for X in results["Y_test"]])
 
-    tables.sort()        
-    tables.simplify()
-    ts = tables.tree_sequence()
-             
-    return ts
+    r_2 = round((np.corrcoef(predictions,realValues)[0,1])**2,5)
+
+    mae_0 = round(mae(realValues,predictions),4)
+    mse_0 = round(mse(realValues,predictions),4)
+    labels = "$R^{2} = $"+str(r_2)+"\n"+"$mae = $" + str(mae_0)+" | "+"$mse = $" + str(mse_0)
+
+    axes[0].scatter(realValues,predictions,marker = "o", color = 'tab:purple',s=5.0,alpha=0.6)
+
+    lims = [
+        np.min([axes[0].get_xlim(), axes[0].get_ylim()]),  # min of both axes
+        np.max([axes[0].get_xlim(), axes[0].get_ylim()]),  # max of both axes
+    ]
+    axes[0].set_xlim(lims)
+    axes[0].set_ylim(lims)
+    axes[0].plot(lims, lims, 'k-', alpha=0.75, zorder=0)
+    axes[0].set_title(results["name"]+"\n"+labels,fontsize=6)
+
+    lossRowIndex = 1
+    axes[1].plot(results["loss"],label = "mae loss",color='tab:cyan')
+    axes[1].plot(results["val_loss"], label= "mae validation loss",color='tab:pink')
+
+    #axes[1].plot(results["mean_squared_error"],label = "mse loss",color='tab:green')
+    #axes[1].plot(results["val_mean_squared_error"], label= "mse validation loss",color='tab:olive')
+
+    axes[1].legend(frameon = False,fontsize = 6)
+    axes[1].set_ylabel("mse")
+
+    axes[0].set_ylabel(str(len(predictions))+" msprime predictions")
+    axes[0].set_xlabel(str(len(realValues))+" msprime real values")
+    fig.subplots_adjust(left=.15, bottom=.16, right=.85, top=.92,hspace = 0.5,wspace=0.4)
+    height = 7.00
+    width = 7.00
+
+    axes[0].grid()
+    fig.set_size_inches(height, width)
+    fig.savefig(saveas)
+
+
+
+
+
